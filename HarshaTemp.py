@@ -1,6 +1,8 @@
 from gpiozero import Button, LED
 from time import sleep, time
 from servo_serial import TMotorManager_servo_serial
+import numpy as np
+
 
 # Define GPIO pins
 lock_sensor_handle = Button(16)
@@ -22,6 +24,12 @@ motor_inflow_params = {'Curr_max': 15.0, 'Curr_min': -15.0, 'GEAR_RATIO': 9, 'Kt
                        'P_max': 58.85, 'P_min': -58.85, 'Temp_max': 40.0, 'Type': 'InflowMotor', 'V_max': 20.0, 'V_min': -20.0}
 motor_outflow_params = {'Curr_max': 15.0, 'Curr_min': -15.0, 'GEAR_RATIO': 9, 'Kt': 0.115, 'NUM_POLE_PAIRS': 21,
                         'P_max': 58.85, 'P_min': -58.85, 'Temp_max': 40.0, 'Type': 'OutflowMotor', 'V_max': 20.0, 'V_min': -20.0}
+
+
+step_size = 0.015  # Adjust step size as needed
+pos = 0
+s = Button(18)
+
 
 #function to get white led
 def white():
@@ -114,6 +122,42 @@ def stop_motor_on_low_torque(motor, target_speed, timeout, torque_threshold, del
 with TMotorManager_servo_serial(port='/dev/ttyACM0', baud=961200, motor_params=motor_handle_params, max_mosfett_temp=50) as motor_handle:
     with TMotorManager_servo_serial(port='/dev/ttyUSB_BOTTOM', baud=961200, motor_params=motor_inflow_params, max_mosfett_temp=50) as motor_inflow:
         with TMotorManager_servo_serial(port='/dev/ttyUSB_TOP', baud=961200, motor_params=motor_outflow_params, max_mosfett_temp=50) as motor_outflow:
+            motor_inflow.set_zero_position()
+            motor_inflow.update()
+            motor_inflow.enter_position_control()
+
+    # Main control loop
+            start_time = time()  # Record start time
+            while True:
+                # Calculate current time
+                 current_time = time()
+        
+        # Increment position by step size
+                 pos += step_size
+                 print(pos)
+        # Set position
+                 motor_inflow.set_output_angle_radians(pos)
+                 motor_inflow.update()
+                 sleep(0.5)
+        # Check button press
+                 if s.is_pressed:
+                      continue  # Continue loop if button not pressed
+                 else:
+                      break  # Exit loop if button pressed
+        
+        # Print device information
+                 print(f"\r {dev}", end='')
+
+        # Add a small delay to control the speed of movement
+        # You might need to adjust the delay based on your motor's speed and step size
+          # Example delay, adjust as needed
+        
+        # Check if the elapsed time has exceeded a certain threshold (e.g., 2 seconds)
+        #if current_time - start_time >= 2:
+            #break  # Exit loop after a certain duration
+
+            print("Loop ended.")
+
             # Move the actuator to DOWN position
             white()
             sleep(30)
@@ -165,3 +209,5 @@ with TMotorManager_servo_serial(port='/dev/ttyACM0', baud=961200, motor_params=m
             control_actuator(actuator_up, duration=2.2)
 
             print("Program ended.")
+
+
